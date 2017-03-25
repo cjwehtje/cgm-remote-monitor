@@ -12,7 +12,7 @@
   var client = Nightscout.client;
   var report_plugins = Nightscout.report_plugins;
 
-  client.init(Nightscout.plugins, function loaded () {
+  client.init(function loaded () {
 
   // init HTML code
   report_plugins.addHtmlFromPlugins( client );
@@ -223,6 +223,7 @@
     options.notes = $('#rp_optionsnotes').is(':checked');
     options.food = $('#rp_optionsfood').is(':checked');
     options.insulin = $('#rp_optionsinsulin').is(':checked');
+    options.insulindistribution = $('#rp_optionsdistribution').is(':checked');
     options.carbs = $('#rp_optionscarbs').is(':checked');
     options.scale = ( $('#rp_linear').is(':checked') ? report_plugins.consts.SCALE_LINEAR : report_plugins.consts.SCALE_LOG );
     options.order = ( $('#rp_oldestontop').is(':checked') ? report_plugins.consts.ORDER_OLDESTONTOP : report_plugins.consts.ORDER_NEWESTONTOP );
@@ -483,6 +484,8 @@
       datastorage.combobolusTreatments = datastorage.combobolusTreatments.concat(datastorage[day].combobolusTreatments);
       datastorage.tempbasalTreatments = datastorage.tempbasalTreatments.concat(datastorage[day].tempbasalTreatments);
     });
+    datastorage.tempbasalTreatments = Nightscout.client.ddata.processDurations(datastorage.tempbasalTreatments);
+    datastorage.treatments.sort(function sort(a, b) {return a.mills - b.mills; });
     
      for (var d in daystoshow) {
         if (daystoshow.hasOwnProperty(d)) {
@@ -538,7 +541,7 @@
   
   function loadData(day, options, callback) {
     // check for loaded data
-    if (options.openAps && datastorage[day] && !datastorage[day].devicestatus) {
+    if ((options.openAps || options.iob || options.cob) && datastorage[day] && !datastorage[day].devicestatus.length) {
       // OpenAPS requested but data not loaded. Load anyway ...
     } else if (datastorage[day] && day !== moment().format('YYYY-MM-DD')) {
       callback(day);
@@ -720,7 +723,7 @@
 
     var cal = data.cal[data.cal.length-1];
     var temp1 = [ ];
-    var rawbg = Nightscout.plugins('rawbg');
+    var rawbg = client.rawbg;
     if (cal) {
       temp1 = data.sgv.map(function (entry) {
         entry.mgdl = entry.y; // value names changed from enchilada
